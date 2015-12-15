@@ -19,10 +19,10 @@ figure
 hold on % so each plot doesn't wipe the predecessor
 
  %% Controller state
- controller = struct('x', 0, 'y', 0, 'theta', 0, 'v', 0, 'mu', 0, 'desiredtheta', 0);
+ controller = struct('x', 0, 'y', 0, 'theta', 90, 'v', 0, 'mu', 0, 'desiredtheta', 90, 'incloud', []);
  
  %% Physical Robot state
- robot = struct('x', 0, 'y', 0, 'theta', 0);
+ robot = struct('x', 0, 'y', 0, 'theta', 90);
 
 %% Main simulation loop
 for kk=1:1000,
