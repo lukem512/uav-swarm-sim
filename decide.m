@@ -31,15 +31,27 @@ function controller = decide(controller, p)
         % tsmovavg(controller.incloud, 's', 
         controller.mu = -1;
     end
+    if p > 0.3
+        controller.mu = -1.5;
+    end
+    if p > 0.5
+        controller.mu = -2;
+    end
+    if p > 0.8
+        controller.mu = -2.5;
+    end
+    if p > 1.2
+        controller.mu = -1;
+    end
     
     % Are we at the boundary?
-    if p > 0.8 && p < 1.2
-        % Stop turning!
-        controller.mu = 0;
-        
-        % Reduce speed, we're there!
-        controller.v = 10;
-    end
+    %if p > 0.8 && p < 1.2
+    %    % Stop turning!
+    %    controller.mu = 0;
+    %    
+    %    % Reduce speed, we're there!
+    %    controller.v = 10;
+    %end
     
     % Saturate turn amount
     % to maximum 6 deg/m

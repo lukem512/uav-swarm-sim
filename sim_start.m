@@ -58,6 +58,9 @@ for kk=1:1000,
     % plot robot location
     plot(robot.x,robot.y,'o')
     
+    % plot robot's estimated location
+    plot(controller.x,controller.y,'ro')
+    
     % plot the cloud contours
     cloudplot(cloud,t)
     
