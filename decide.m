@@ -13,8 +13,9 @@ function controller = decide(controller, p)
     
     % The UAV may fly no more than 1km from (0,0)
     % Pick 900 to be safe
-    if pdist([controller.x, controller.y; 0, 0]) > 100
+    if pdist([controller.x, controller.y; 0, 0]) > 900
         % Fly back towards (0,0)
+        % TODO
         controller.mu = -3;
     end
    
@@ -31,6 +32,8 @@ function controller = decide(controller, p)
         % tsmovavg(controller.incloud, 's', 
         controller.mu = -1;
     end
+    
+    % Tighter circles if we're further inside
     if p > 0.3
         controller.mu = -1.5;
     end
@@ -40,18 +43,20 @@ function controller = decide(controller, p)
     if p > 0.8
         controller.mu = -2.5;
     end
+    
+    % Are we at the boundary?
+    if p > 0.9 && p < 1.1
+        % Stop turning!
+        controller.mu = 0;
+        
+        % Reduce speed, we're there!
+        controller.v = 10;
+    end
+    
+    % Too deep!
     if p > 1.2
         controller.mu = -1;
     end
-    
-    % Are we at the boundary?
-    %if p > 0.8 && p < 1.2
-    %    % Stop turning!
-    %    controller.mu = 0;
-    %    
-    %    % Reduce speed, we're there!
-    %    controller.v = 10;
-    %end
     
     % Saturate turn amount
     % to maximum 6 deg/m
