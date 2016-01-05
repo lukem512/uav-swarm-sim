@@ -24,12 +24,13 @@ function controller = decide(controller, p)
     
     % Add to incloud array
     % TODO
-    controller.incloud = [controller.incloud (p > 0.01)];
+    controller.incloud = [controller.incloud; (p > 0.01)];
     
     % Are we inside the cloud?
     % If so, tighter circles
     if p > 0.01
-        % tsmovavg(controller.incloud, 's', 
+        size(controller.incloud)
+        tsmovavg(controller.incloud, 's', 5, 1)
         controller.mu = -1;
     end
     
