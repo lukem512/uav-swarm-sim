@@ -7,19 +7,23 @@ function controller = decide(controller, p, dt)
     controller.v = b.maxv(dt);
     
     % Too close to the boundary?
+    % Turn towards the origin
     if pdist([controller.x,controller.y;0,0]) > 300
         if controller.steps > 0
             controller.steps = controller.steps - 1;
         else
-			origin.x = 0;
-			origin.y = 0;
-            delta = atan2d(origin.x-controller.x,origin.y-controller.y) - controller.theta;
-            [controller, steps] = turn(controller, delta, dt);
-            controller.steps = steps - 1
+			[controller, steps] = face(controller, 0, 0, dt);
+            controller.steps = steps - 1;
         end
     end
 	
 	% TODO - more complex sensing behaviour
+end
+
+% Turn towards coordinates
+function [controller, steps] = face(controller, x, y, dt)
+    delta = atan2d(x-controller.x,y-controller.y) - controller.theta;
+    [controller, steps] = turn(controller, delta, dt);
 end
 
 % Turn by delta degrees
