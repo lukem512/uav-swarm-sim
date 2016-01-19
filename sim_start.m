@@ -3,6 +3,7 @@ function sim_start
 % simulation example for use of cloud dispersion model
 %
 % Arthur Richards, Nov 2014
+% Luke Mitchell, Jan 2016
 %
 
 % load cloud data
@@ -18,11 +19,23 @@ dt = 1;
 figure
 hold on % so each plot doesn't wipe the predecessor
 
- %% Controller state
- controller = struct('x', 0, 'y', 0, 'theta', 90, 'v', 0, 'mu', 0, 'desiredtheta', 90, 'incloud', []);
+%% Controller state
+% Estimated position
+controller.x = 0;
+controller.y = 0;
+controller.theta = 0;
+
+% Commands
+controller.v = 0;
+controller.mu = 0;
+
+% Memory
+controller.steps = 0;
  
- %% Physical Robot state
- robot = struct('x', 0, 'y', 0, 'theta', 90);
+%% Physical Robot state
+robot.x = 0;
+robot.y = 0;
+robot.theta = 0;
 
 %% Main simulation loop
 for kk=1:1000,
@@ -40,6 +53,7 @@ for kk=1:1000,
     
     % Update theta estimate
     controller.theta = controller.theta + controller.v*controller.mu;
+    controller.theta = mod(controller.theta, 360);
     
     %% Physical Robot
     % Move the robot
@@ -56,7 +70,10 @@ for kk=1:1000,
     title(sprintf('t=%.1f secs pos=(%.1f, %.1f)  Concentration=%.2f',t,robot.x,robot.y,p))
         
     % plot robot location
-    plot(robot.x,robot.y,'o')
+    plot(robot.x,robot.y,'o');
+ 
+    % plot orientaion
+    plot([robot.x; robot.x+(sind(robot.theta)*50)],[robot.y; robot.y+(cosd(robot.theta)*50)],'-')
     
     % plot robot's estimated location
     plot(controller.x,controller.y,'ro')
