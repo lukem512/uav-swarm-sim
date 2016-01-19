@@ -30,6 +30,7 @@ controller.v = 0;
 controller.mu = 0;
 
 % Memory
+controller.state = 1;
 controller.steps = 0;
  
 %% Physical Robot state
