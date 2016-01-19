@@ -13,7 +13,7 @@ load 'cloud2.mat'
 
 % time and time step
 t = 0;
-dt = 1;
+dt = 2;
 
 % open new figure window
 figure
@@ -49,7 +49,7 @@ for kk=1:1000,
     
     %% Controller
     % Decide where to move
-    controller = decide(controller, p);
+    controller = decide(controller, p, dt);
     
     % Update theta estimate
     controller.theta = controller.theta + controller.v*controller.mu;
@@ -57,7 +57,7 @@ for kk=1:1000,
     
     %% Physical Robot
     % Move the robot
-    robot = move(robot, controller.v, controller.mu);
+    robot = move(robot, controller.v, controller.mu, dt);
     
     % Retrieve noisy location from GPS
     [controller.x,controller.y] = gps(robot);

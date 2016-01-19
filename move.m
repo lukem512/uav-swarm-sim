@@ -1,16 +1,19 @@
-function robot = move(robot, v, mu)
+function robot = move(robot, v, mu, dt)
+    % Make bounds object
+    b = bounds();
+    
     % Physically cap speed
-    if v < 10
-        v = 10;
-    elseif v > 20
-        v = 20;
+    if v < b.minv(dt)
+        v = b.minv(dt);
+    elseif v > b.maxv(dt)
+        v = b.maxv(dt);
     end
     
     % Physically cap turn
-    if mu < -6
-        mu = -6;
-    elseif mu > 6
-        mu = 6;
+    if mu < b.minmu(dt)
+        mu = b.minmu(dt);
+    elseif mu > b.maxmu(dt)
+        mu = b.maxmu(dt);
     end
     
     % Runge-Kutta
