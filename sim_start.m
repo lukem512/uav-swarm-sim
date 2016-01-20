@@ -36,6 +36,7 @@ for aa = 1:nAgents
     controller.mu = 0;
 
     % Memory
+    controller.id = aa;
     controller.state = 1;
     controller.steps = 0;
 
@@ -72,10 +73,10 @@ for kk=1:1000,
         [msgs,channel] = simReceive(channel);
         
         % Decide where to move
-        controller = decide(controller, p, msgs, dt);
+        controller = decide(controller, p, msgs, dt, t);
         
         % Send location to other agents
-        channel = simTransmit([controller.x controller.y],channel);
+        channel = simTransmit([controller.x controller.y controller.theta], channel);
 
         % Update theta estimate
         controller.theta = controller.theta + controller.v*controller.mu;

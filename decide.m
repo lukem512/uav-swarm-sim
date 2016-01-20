@@ -4,7 +4,7 @@
 %
 % Luke Mitchell, Jan 2016
 %
-function controller = decide(controller, p, msgs, dt)
+function controller = decide(controller, p, msgs, dt, t)
     % Make bounds object
     b = bounds();
     
@@ -42,16 +42,46 @@ function controller = decide(controller, p, msgs, dt)
                 controller.target.x = 0;
                 controller.target.y = 0;
                 disp('Returning to origin...');
-                controller.state = 2;
                 return
             end
             
             % Are we too close to another agent?
-            %for jj = 1:size(msgs),
-            %    if norm([controller.x controller.y] - msgs{jj}) < 50
-            %        % Back up!
-            %    end
-            %end
+            % TODO - turn away from closest object
+            if t > 30
+                for jj = 1:(controller.id-1)
+                    other = msgs{jj};
+                    
+                    % Compute intersection
+                    x = [controller.x other(1); ...
+                        (controller.x + sind(controller.theta)*100) (other(1) + sind(other(3))*100)];
+                    y = [controller.y other(2); ...
+                        (controller.y + cosd(controller.theta)*100) (other(2) + cosd(other(3))*100)];
+                    
+                    dx = diff(x);
+                    dy = diff(y);
+                    den = dx(1)*dy(2)-dy(1)*dx(2);
+                    ua = (dx(2)*(y(1)-y(3))-dy(2)*(x(1)-x(3)))/den;
+                    ub = (dx(1)*(y(1)-y(3))-dy(1)*(x(1)-x(3)))/den;
+                    
+                    % If they collide, turn away
+                    if all(([ua ub] >= 0) & ([ua ub] <= 1))
+                        xi = x(1)+ua*dx(1);
+                        yi = y(1)+ua*dy(1);
+                        controller.target.x = xi + sind(180+controller.theta)*100;
+                        controller.target.y = yi + cosd(180+controller.theta)*100;
+                        return
+                    end
+
+                    % Too close anyway?
+                    if norm([controller.x controller.y] - other(1:2)) < 100
+                        % Back up!
+                        % Pick a target behind us
+                        controller.target.x = controller.x + sind(180+controller.theta)*100;
+                        controller.target.y = controller.y + cosd(180+controller.theta)*100;
+                        return
+                    end
+                end
+            end
             
             % Are we in the cloud?
             if incloud(p)
