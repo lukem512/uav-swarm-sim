@@ -1,16 +1,12 @@
-function controller = decide(controller, p, dt)
+%
+% Robot decision-making functions
+% This contains a finite-state machine for most of the work.
+%
+% Luke Mitchell, Jan 2016
+%
+function controller = decide(controller, p, msgs, dt)
     % Make bounds object
     b = bounds();
-    
-    % Too close to the boundary?
-    % Turn towards the origin
-    if  controller.x > 900
-    or  controller.y > 900
-        controller.target.x = 0;
-        controller.target.y = 0;
-        disp('Returning to origin...');
-        controller.state = 2;
-    end
     
     % FSM
     switch controller.state
@@ -40,6 +36,23 @@ function controller = decide(controller, p, dt)
                 controller.steps = steps - 1;
             end
             
+            % Too close to the boundary?
+            % Turn towards the origin
+            if norm([controller.x controller.y] - [0 0]) > 900
+                controller.target.x = 0;
+                controller.target.y = 0;
+                disp('Returning to origin...');
+                controller.state = 2;
+                return
+            end
+            
+            % Are we too close to another agent?
+            %for jj = 1:size(msgs),
+            %    if norm([controller.x controller.y] - msgs{jj}) < 50
+            %        % Back up!
+            %    end
+            %end
+            
             % Are we in the cloud?
             if incloud(p)
                 disp('We are in the cloud!');
@@ -50,7 +63,7 @@ function controller = decide(controller, p, dt)
             % Have we arrived?
             % Use a threshold to stop the UAV spinning around the targ.
             if pdist([controller.x,controller.y; ...
-                    controller.target.x,controller.target.y]) < 10
+                    controller.target.x,controller.target.y]) < 20
                 disp('We have arrived!');
                 controller.state = 1;
                 return

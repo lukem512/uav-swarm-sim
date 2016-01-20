@@ -1,4 +1,8 @@
-% Function pointers
+%
+% Bounds-checking functions, dependent upon timestep
+%
+% Luke Mitchell, Jan 2016
+%
 function b = bounds
     b.minv  = @minv;
     b.maxv  = @maxv;

@@ -1,3 +1,9 @@
+%
+% Move the "physical" robot
+% Not accessible from simulated controller.
+%
+% Luke Mitchell, Jan 2016
+%
 function robot = move(robot, v, mu, dt)
     % Make bounds object
     b = bounds();
