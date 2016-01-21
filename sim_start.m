@@ -23,6 +23,9 @@ agents = cell(nAgents);
 figure
 hold on
 
+% Colour map
+colours = ['m', 'c', 'r', 'g', 'b', 'k'];
+
 %% Create the agents
 for aa = 1:nAgents
     %% Controller state
@@ -63,7 +66,7 @@ for kk=1:1000,
         %% Get simulation values
         controller = agents{aa}.controller;
         robot = agents{aa}.robot;
-        
+
         %% Take measurement
         % take measurement
         p = cloudsamp(cloud,robot.x,robot.y,t);
@@ -79,7 +82,8 @@ for kk=1:1000,
         channel = simTransmit([controller.x controller.y controller.theta], channel);
 
         % Update theta estimate
-        controller.theta = controller.theta + controller.v*controller.mu;
+        k = controller.v * controller.mu;
+        controller.theta = controller.theta+(k+2*k+2*k+k)*dt/6;
         controller.theta = mod(controller.theta, 360);
 
         %% Physical Robot
@@ -89,7 +93,7 @@ for kk=1:1000,
         % Retrieve noisy location from GPS
         [controller.x,controller.y] = gps(robot);
         
-         %% Store values
+        %% Store values
         agents{aa}.controller = controller;
         agents{aa}.robot = robot;
     end
@@ -105,14 +109,18 @@ for kk=1:1000,
     title(sprintf('Simulation state at t=%.1f secs',t))
     
     for aa = 1:nAgents
-        % Get value
+        % Get values
         robot = agents{aa}.robot;
         
+        % Make colour
+        colour = colours(mod(aa, size(colours,2))+1);
+        
         % Plot robot location
-        plot(robot.x,robot.y,'o');
+        plot(robot.x,robot.y,'Color',colour,'Marker','o');
 
         % Plot orientaion
-        plot([robot.x; robot.x+(sind(robot.theta)*50)],[robot.y; robot.y+(cosd(robot.theta)*50)],'-')
+        plot([robot.x; robot.x+(sind(robot.theta)*50)],[robot.y; robot.y+(cosd(robot.theta)*50)], ...
+            'Color',colour,'LineStyle','-')
     end
     
     % Plot the cloud contours

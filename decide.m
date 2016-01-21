@@ -17,10 +17,7 @@ function controller = decide(controller, p, msgs, dt, t)
             r = (b-a).*rand(2,1) + a;
             controller.target.x = round(r(1));
             controller.target.y = round(r(2));
-            fprintf('Flying to random location (%d,%d)\n', ...
-                controller.target.x, controller.target.y);
             controller.state = 2;
-            return
             
         % Fly to target
         case 2
@@ -41,15 +38,20 @@ function controller = decide(controller, p, msgs, dt, t)
             if norm([controller.x controller.y] - [0 0]) > 900
                 controller.target.x = 0;
                 controller.target.y = 0;
-                disp('Returning to origin...');
+                disp('Flying back towards origin');
                 return
             end
             
             % Are we too close to another agent?
-            % TODO - turn away from closest object
             if t > 30
                 for jj = 1:(controller.id-1)
                     other = msgs{jj};
+                    
+                    % Check for collisions
+                    dist = round(norm([controller.x controller.y] - other(1:2)));
+                    if dist < 50
+                        disp(fprintf('[Agent %d] I am %dm from agent %d. That is too close!', controller.id, dist, jj));
+                    end
                     
                     % Compute intersection
                     x = [controller.x other(1); ...
@@ -67,25 +69,24 @@ function controller = decide(controller, p, msgs, dt, t)
                     if all(([ua ub] >= 0) & ([ua ub] <= 1))
                         xi = x(1)+ua*dx(1);
                         yi = y(1)+ua*dy(1);
-                        controller.target.x = xi + sind(180+controller.theta)*100;
-                        controller.target.y = yi + cosd(180+controller.theta)*100;
+                        heading = 90 + (controller.theta - other(3));
+                        controller.target.x = xi + sind(heading)*100;
+                        controller.target.y = yi + cosd(heading)*100;
                         return
                     end
-
-                    % Too close anyway?
-                    if norm([controller.x controller.y] - other(1:2)) < 100
-                        % Back up!
+                   
+                    % Too close?
+                    if dist < 100
                         % Pick a target behind us
                         controller.target.x = controller.x + sind(180+controller.theta)*100;
                         controller.target.y = controller.y + cosd(180+controller.theta)*100;
-                        return
                     end
                 end
             end
             
             % Are we in the cloud?
             if incloud(p)
-                disp('We are in the cloud!');
+                disp(fprintf('[Agent %d] I am in the cloud!', controller.id));
                 controller.state = 3;
                 return
             end
@@ -94,7 +95,6 @@ function controller = decide(controller, p, msgs, dt, t)
             % Use a threshold to stop the UAV spinning around the targ.
             if pdist([controller.x,controller.y; ...
                     controller.target.x,controller.target.y]) < 20
-                disp('We have arrived!');
                 controller.state = 1;
                 return
             end
@@ -104,11 +104,14 @@ function controller = decide(controller, p, msgs, dt, t)
             % Spin as quickly as possible
             controller.mu = b.maxmu(dt);
             controller.v = b.maxv(dt);
+            
+            % Check whether we're still in the cloud
+            % TODO
             return
-        
+            
         % Something went wrong
         otherwise
-            disp('Something went wrong!');
+            disp(fprintf('[Agent %d] I am in an unknown state. Help!', controller.id));
     end
 end
 
