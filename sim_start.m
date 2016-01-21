@@ -16,7 +16,7 @@ t = 0;
 dt = 2;
 
 % Number of agents in swarm
-nAgents = 10;
+nAgents = 5;
 agents = cell(nAgents);
 
 % Open new figure window
@@ -25,6 +25,7 @@ hold on
 
 % Colour map
 colours = ['m', 'c', 'r', 'g', 'b', 'k'];
+drawAirspace = true;
 
 %% Create the agents
 for aa = 1:nAgents
@@ -42,6 +43,8 @@ for aa = 1:nAgents
     controller.id = aa;
     controller.state = 1;
     controller.steps = 0;
+    controller.neighbour.id = 0;
+    controller.neighbour.distance = inf;
 
     %% Physical Robot state
     robot.x = 0;
@@ -78,10 +81,7 @@ for kk=1:1000,
         % Decide where to move
         controller = decide(controller, p, msgs, dt, t);
         
-        % Send location to other agents
-        channel = simTransmit([controller.x controller.y controller.theta], channel);
-
-        % Update theta estimate
+        % Update position estimates
         k = controller.v * controller.mu;
         controller.theta = controller.theta+(k+2*k+2*k+k)*dt/6;
         controller.theta = mod(controller.theta, 360);
@@ -90,8 +90,12 @@ for kk=1:1000,
         % Move the robot
         robot = move(robot, controller.v, controller.mu, dt);
 
+        %% Controller
         % Retrieve noisy location from GPS
         [controller.x,controller.y] = gps(robot);
+        
+        % Send location to other agents
+        channel = simTransmit([controller.x controller.y controller.theta], channel);
         
         %% Store values
         agents{aa}.controller = controller;
@@ -119,8 +123,13 @@ for kk=1:1000,
         plot(robot.x,robot.y,'Color',colour,'Marker','o');
 
         % Plot orientaion
-        plot([robot.x; robot.x+(sind(robot.theta)*50)],[robot.y; robot.y+(cosd(robot.theta)*50)], ...
+        plot([robot.x; robot.x+(sind(robot.theta)*100)],[robot.y; robot.y+(cosd(robot.theta)*100)], ...
             'Color',colour,'LineStyle','-')
+        
+        if drawAirspace
+            viscircles([robot.x robot.y],50);
+            viscircles([robot.x robot.y],150);
+        end
     end
     
     % Plot the cloud contours

@@ -38,57 +38,19 @@ function controller = decide(controller, p, msgs, dt, t)
             if norm([controller.x controller.y] - [0 0]) > 900
                 controller.target.x = 0;
                 controller.target.y = 0;
-                disp('Flying back towards origin');
-                return
             end
             
-            % Are we too close to another agent?
-            if t > 30
-                for jj = 1:(controller.id-1)
-                    other = msgs{jj};
-                    
-                    % Check for collisions
-                    dist = round(norm([controller.x controller.y] - other(1:2)));
-                    if dist < 50
-                        disp(fprintf('[Agent %d] I am %dm from agent %d. That is too close!', controller.id, dist, jj));
-                    end
-                    
-                    % Compute intersection
-                    x = [controller.x other(1); ...
-                        (controller.x + sind(controller.theta)*100) (other(1) + sind(other(3))*100)];
-                    y = [controller.y other(2); ...
-                        (controller.y + cosd(controller.theta)*100) (other(2) + cosd(other(3))*100)];
-                    
-                    dx = diff(x);
-                    dy = diff(y);
-                    den = dx(1)*dy(2)-dy(1)*dx(2);
-                    ua = (dx(2)*(y(1)-y(3))-dy(2)*(x(1)-x(3)))/den;
-                    ub = (dx(1)*(y(1)-y(3))-dy(1)*(x(1)-x(3)))/den;
-                    
-                    % If they collide, turn away
-                    if all(([ua ub] >= 0) & ([ua ub] <= 1))
-                        xi = x(1)+ua*dx(1);
-                        yi = y(1)+ua*dy(1);
-                        heading = 90 + (controller.theta - other(3));
-                        controller.target.x = xi + sind(heading)*100;
-                        controller.target.y = yi + cosd(heading)*100;
-                        return
-                    end
-                   
-                    % Too close?
-                    if dist < 100
-                        % Pick a target behind us
-                        controller.target.x = controller.x + sind(180+controller.theta)*100;
-                        controller.target.y = controller.y + cosd(180+controller.theta)*100;
-                    end
-                end
+            % Check too close to another agent?
+            [controller, stop] = airspace(controller, msgs, t);
+            if stop
+                return
             end
             
             % Are we in the cloud?
             if incloud(p)
-                disp(fprintf('[Agent %d] I am in the cloud!', controller.id));
-                controller.state = 3;
-                return
+                %disp(fprintf('[Agent %d] I am in the cloud!', controller.id));
+                %controller.state = 3;
+                %return
             end
             
             % Have we arrived?
@@ -112,6 +74,85 @@ function controller = decide(controller, p, msgs, dt, t)
         % Something went wrong
         otherwise
             disp(fprintf('[Agent %d] I am in an unknown state. Help!', controller.id));
+    end
+end
+
+% Are we too close to another agent?
+function [controller, stop] = airspace(controller, msgs, t)
+    stop = false;
+    
+    if t > 30
+        index = 0;
+        closest = inf;
+        for jj = 1:size(msgs)
+            if jj == controller.id
+                continue
+            end
+            other = msgs{jj};
+            dist = round(norm([controller.x controller.y] - other(1:2)));
+            if dist < closest
+                closest = dist;
+                index = jj;
+            end
+            if dist < 50
+                disp(fprintf('[Agent %d] I am TOO CLOSE to agent %d!', controller.id, jj));
+            end
+        end
+
+        % What to do?
+        [controller, stop] = proximity(controller, msgs, closest, index);
+
+        % Store the values
+        controller.neighbour.id = index;
+        controller.neighbour.distance = closest;
+    end
+end
+
+% Too close?
+function [controller, stop] = proximity(controller,  msgs, closest, index)
+    stop = false;
+    
+    % Is there a closest neighbour?
+    if closest < inf
+        % If it's the same neighbour as before,
+        % and they're further away, leave things as they are
+        if index == controller.neighbour.id
+            if closest > controller.neighbour.distance
+                return
+            end
+        end
+        
+        other = msgs{index};
+
+        % Does our airspace intersect theirs?
+        [xout,~] = circcirc(controller.x,controller.y,150,other(1),other(2),150);
+        if ~isnan(xout)
+            delta = abs(other(3) - controller.theta);
+            if delta < 90
+                % IF ANGLE IS GREATER, TURN RIGHT
+                % ELSE, TURN LEFT
+                if controller.theta > other(3)
+                    heading = -90;
+                else
+                    heading = 90;
+                end
+            elseif delta > 270
+                % IF ANGLE IS GREATER, TURN LEFT
+                % ELSE, TURN RIGHT
+                if controller.theta > other(3)
+                    heading = 90;
+                else
+                    heading = -90;
+                end
+            else
+                % TURN RIGHT
+                heading = -90;
+            end
+
+            controller.target.x = controller.x + sind(controller.theta + heading)*400;
+            controller.target.y = controller.y + cosd(controller.theta + heading)*400;
+            stop = true;
+        end
     end
 end
 
@@ -154,13 +195,14 @@ function [controller, steps] = turn(controller, delta, dt)
     while ~found
         steps = steps + 1;
         ang = delta / steps;
-        for v = b.minv(dt):b.maxv(dt)
+        v = b.minv(dt);
+        %for v = b.minv(dt):b.maxv(dt)
             mu = ang / v;
             if abs(mu) < b.maxmu(dt)
                 found = true;
                 break
             end
-        end
+        %end
     end
     controller.v = v;
     controller.mu = mu;
