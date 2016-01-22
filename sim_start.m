@@ -24,7 +24,9 @@ figure
 hold on
 
 % Colour map
-colours = ['m', 'c', 'r', 'g', 'b', 'k'];
+colours = [[0.859 0.251 0.251]; [0.969 0.408 0.408]; [1.0 0.588 0.588]; ...
+    [0.737 0.122 0.122]; [0.585 0.035 0.035]; [1.0 0.0 0.0]; ...
+    [0.988 0.102 0.102]; [1.0 0.266 0.266]; [0.784 0.0 0.0]];
 drawAirspace = false;
 
 % Plot history
@@ -130,7 +132,7 @@ for kk=1:1000,
         robot = agents{aa}.robot;
         
         % Make colour
-        colour = colours(mod(aa, size(colours,2))+1);
+        colour = colours(mod(aa, size(colours, 1))+1, :);
         
         % Plot robot location
         plot(robot.x,robot.y,'Color',colour,'Marker','o');
