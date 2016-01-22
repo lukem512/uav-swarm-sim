@@ -1,7 +1,5 @@
-function [x, y, theta] = rk4(x, y, theta, v, mu)
+function [x, y, theta] = rk4(x, y, theta, v, mu, dt)
     % Runge-Kutta (rk4)
-    dt = 2;
-
     [k1_x, k1_y, k1_theta] = f_continuous(theta, v, mu);
     [k2_x, k2_y, k2_theta] = f_continuous(theta + k1_theta*dt/2, v, mu);
     [k3_x, k3_y, k3_theta] = f_continuous(theta + k2_theta*dt/2, v, mu);

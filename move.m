@@ -24,5 +24,5 @@ function robot = move(robot, v, mu, dt)
     
     % Runge-Kutta (rk4)
     [robot.x, robot.y, robot.theta] = rk4(robot.x, robot.y, robot.theta, ...
-        v, mu);
+        v, mu, dt);
 end

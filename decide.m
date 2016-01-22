@@ -41,7 +41,7 @@ function controller = decide(controller, p, msgs, dt, t)
             end
             
             % Check too close to another agent?
-            [controller, stop] = airspace(controller, msgs, t);
+            [controller, stop] = airspace(controller, msgs, dt, t);
             if stop
                 return
             end
@@ -78,29 +78,40 @@ function controller = decide(controller, p, msgs, dt, t)
 end
 
 % Are we too close to another agent?
-function [controller, stop] = airspace(controller, msgs, t)
+function [controller, stop] = airspace(controller, msgs, dt, t)
     stop = false;
     
     if t > 30
+        them = 0;
         index = 0;
         closest = inf;
         for jj = 1:size(msgs)
+            % Get the other agent, skipping ourself
             if jj == controller.id
                 continue
             end
             other = msgs{jj};
+            
+            % Current position
             dist = round(norm([controller.x controller.y] - other(1:2)));
+            if dist < 50
+                disp(fprintf('[Agent %d] I am TOO CLOSE to agent %d!', controller.id, jj));
+            end
+            
+            % If it continued, where would it be?
+            [x, y, theta] = rk4(other(1), other(2), other(3), ...
+               other(4), other(5), dt);
+            dist = round(norm([controller.x controller.y] - [x y]));
+            
             if dist < closest
                 closest = dist;
                 index = jj;
-            end
-            if dist < 50
-                disp(fprintf('[Agent %d] I am TOO CLOSE to agent %d!', controller.id, jj));
+                them = [x y theta];
             end
         end
 
         % What to do?
-        [controller, stop] = proximity(controller, msgs, closest, index);
+        [controller, stop] = proximity(controller, index, closest, them, dt);
 
         % Store the values
         controller.neighbour.id = index;
@@ -109,7 +120,7 @@ function [controller, stop] = airspace(controller, msgs, t)
 end
 
 % Too close?
-function [controller, stop] = proximity(controller,  msgs, closest, index)
+function [controller, stop] = proximity(controller, index, closest, them, dt)
     stop = false;
     
     % Is there a closest neighbour?
@@ -122,16 +133,21 @@ function [controller, stop] = proximity(controller,  msgs, closest, index)
             end
         end
         
-        other = msgs{index};
+        % Where will we be the next timestep?
+        [x, y, theta] = rk4(controller.x, controller.y, controller.theta, ...
+               controller.v, controller.mu, dt);
+           
+        % TODO - if our heading does not collide with them, do not turn
 
-        % Does our airspace intersect theirs?
-        [xout,~] = circcirc(controller.x,controller.y,150,other(1),other(2),150);
-        if ~isnan(xout)
-            delta = abs(other(3) - controller.theta);
+        % Will our airspace intersect theirs?
+        r = 100;
+        [xout,~] = circcirc(x,y,r,them(1),them(2),r);
+        if ~isnan(xout)         
+            delta = abs(them(3) - theta);
             if delta < 90
                 % IF ANGLE IS GREATER, TURN RIGHT
                 % ELSE, TURN LEFT
-                if controller.theta > other(3)
+                if theta > them(3)
                     heading = -90;
                 else
                     heading = 90;
@@ -139,7 +155,7 @@ function [controller, stop] = proximity(controller,  msgs, closest, index)
             elseif delta > 270
                 % IF ANGLE IS GREATER, TURN LEFT
                 % ELSE, TURN RIGHT
-                if controller.theta > other(3)
+                if theta > them(3)
                     heading = 90;
                 else
                     heading = -90;
@@ -148,9 +164,8 @@ function [controller, stop] = proximity(controller,  msgs, closest, index)
                 % TURN RIGHT
                 heading = -90;
             end
-
-            controller.target.x = controller.x + sind(controller.theta + heading)*400;
-            controller.target.y = controller.y + cosd(controller.theta + heading)*400;
+            controller.target.x = x + sind(theta + heading)*400;
+            controller.target.y = y + cosd(theta + heading)*400;
             stop = true;
         end
     end
@@ -195,14 +210,13 @@ function [controller, steps] = turn(controller, delta, dt)
     while ~found
         steps = steps + 1;
         ang = delta / steps;
-        v = b.minv(dt);
-        %for v = b.minv(dt):b.maxv(dt)
+        for v = b.minv(dt):b.maxv(dt)
             mu = ang / v;
             if abs(mu) < b.maxmu(dt)
                 found = true;
                 break
             end
-        %end
+        end
     end
     controller.v = v;
     controller.mu = mu;

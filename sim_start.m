@@ -25,7 +25,10 @@ hold on
 
 % Colour map
 colours = ['m', 'c', 'r', 'g', 'b', 'k'];
-drawAirspace = true;
+drawAirspace = false;
+
+% Plot history
+nHistory = 3;
 
 %% Create the agents
 for aa = 1:nAgents
@@ -50,6 +53,9 @@ for aa = 1:nAgents
     robot.x = 0;
     robot.y = 0;
     robot.theta = 0;
+    
+    % Historical positions, for drawing
+    robot.history = zeros(nHistory,2);
     
     %% Store values
     agents{aa}.controller = controller;
@@ -87,6 +93,12 @@ for kk=1:1000,
         controller.theta = mod(controller.theta, 360);
 
         %% Physical Robot
+        % Store history
+        for jj = nHistory:-1:2
+            robot.history(jj, :) = robot.history(jj-1, :);
+        end
+        robot.history(1, :) = [robot.x robot.y];
+        
         % Move the robot
         robot = move(robot, controller.v, controller.mu, dt);
 
@@ -95,7 +107,8 @@ for kk=1:1000,
         [controller.x,controller.y] = gps(robot);
         
         % Send location to other agents
-        channel = simTransmit([controller.x controller.y controller.theta], channel);
+        msg = [controller.x controller.y controller.theta controller.v controller.mu];
+        channel = simTransmit(msg, channel);
         
         %% Store values
         agents{aa}.controller = controller;
@@ -122,13 +135,12 @@ for kk=1:1000,
         % Plot robot location
         plot(robot.x,robot.y,'Color',colour,'Marker','o');
 
-        % Plot orientaion
-        plot([robot.x; robot.x+(sind(robot.theta)*100)],[robot.y; robot.y+(cosd(robot.theta)*100)], ...
-            'Color',colour,'LineStyle','-')
+        % Plot orientation
+        plot(robot.history(:,1), robot.history(:,2), 'Color',colour,'LineStyle',':');
         
         if drawAirspace
             viscircles([robot.x robot.y],50);
-            viscircles([robot.x robot.y],150);
+            viscircles([robot.x robot.y],100);
         end
     end
     
