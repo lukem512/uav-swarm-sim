@@ -86,7 +86,7 @@ for kk=1:1000,
         [msgs,channel] = simReceive(channel);
         
         % Set off one at a time
-        if t > aa * 10
+        if t > (aa-1) * 10
             
             % Decide where to move
             controller = decide(controller, p, msgs, dt);
