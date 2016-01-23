@@ -16,7 +16,7 @@ t = 0;
 dt = 2;
 
 % Number of agents in swarm
-nAgents = 5;
+nAgents = 7;
 agents = cell(nAgents);
 
 % Open new figure window
@@ -86,7 +86,7 @@ for kk=1:1000,
         [msgs,channel] = simReceive(channel);
         
         % Set off one at a time
-        if t > (aa-1) * 10
+        if t > (aa-1) * 30
             
             % Decide where to move
             controller = decide(controller, p, msgs, dt);
