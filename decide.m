@@ -25,13 +25,38 @@ function controller = decide(controller, p, msgs, dt)
     
     % FSM
     switch controller.state
-        % Pick a random target
+        % Pick a target
         case 1
-            a = -900;
-            b = 900;
-            r = (b-a).*rand(2,1) + a;
-            controller.target.x = round(r(1));
-            controller.target.y = round(r(2));
+            % Defaults - most of the map
+            lowerX = -900;
+            lowerY = -900;
+            upperX = 900;
+            upperY = 900;
+            
+            % Has another agent found the cloud?
+            for jj = 1:size(msgs)
+                if jj == controller.id
+                    continue
+                end
+                other = msgs{jj};
+                if other(6)
+                    lowerX = other(1) - 200;
+                    upperX = other(1) + 200;
+                    lowerY = other(2) - 200;
+                    upperY = other(2) + 200;
+                    break
+                end
+            end
+            
+            % Pick a random target
+            a = lowerX;
+            b = upperX;
+            r = (b-a).*rand() + a;
+            controller.target.x = round(r);
+            a = lowerY;
+            b = upperY;
+            r = (b-a).*rand() + a;
+            controller.target.y = round(r);
             controller.steps = 0;
             controller.state = 2;
             
@@ -76,9 +101,10 @@ function controller = decide(controller, p, msgs, dt)
             
             % Are we in the cloud?
             if incloud(p)
-                %disp(fprintf('[Agent %d] I am in the cloud!', controller.id));
-                %controller.state = 3;
-                %return
+                disp(fprintf('[Agent %d] I am in the cloud!', controller.id));
+                controller.incloud = true;
+                controller.state = 3;
+                return
             end
             
             % Will we arrived?

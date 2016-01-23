@@ -16,7 +16,7 @@ t = 0;
 dt = 2;
 
 % Number of agents in swarm
-nAgents = 7;
+nAgents = 8;
 agents = cell(nAgents);
 
 % Open new figure window
@@ -47,6 +47,7 @@ for aa = 1:nAgents
     % Memory
     controller.id = aa;
     controller.state = 1;
+    controller.incloud = false;
     controller.neighbour.id = 0;
     controller.neighbour.distance = inf;
 
@@ -67,7 +68,7 @@ end
 channel = initChannel();
 
 %% Main simulation loop
-for kk=1:1000,
+for kk=1:((30 * 60 * 60) / dt),
     
     % time
     t = t + dt;
@@ -111,7 +112,8 @@ for kk=1:1000,
             [controller.x,controller.y] = gps(robot);
 
             % Send location to other agents
-            msg = [controller.x controller.y controller.theta controller.v controller.mu];
+            msg = [controller.x controller.y controller.theta ...
+                controller.v controller.mu controller.incloud];
             channel = simTransmit(msg, channel);
         end
 
@@ -135,7 +137,11 @@ for kk=1:1000,
         robot = agents{aa}.robot;
         
         % Make colour
-        colour = colours(mod(aa, size(colours, 1))+1, :);
+        if agents{aa}.controller.incloud
+            colour = 'g';
+        else
+            colour = colours(mod(aa, size(colours, 1))+1, :);
+        end
         
         % Plot robot location
         plot(robot.x,robot.y,'Color',colour,'Marker','o');
