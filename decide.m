@@ -34,14 +34,26 @@ function controller = decide(controller, p, msgs, dt, t)
             end
             
             % Too close to the boundary?
+            if norm([controller.x controller.y] - [0 0]) > 1000
+                disp(fprintf('[Agent %d] I am TOO FAR from base!', controller.id));
+            end
+            
+            % Where will we be next timestep?
+            [x, y, theta] = rk4(controller.x, controller.y, ...
+                controller.theta, controller.v, ...
+                controller.mu, dt);
+            next = [x y theta];
+            
+            % Will we be too far away?
             % Turn towards the origin
-            if norm([controller.x controller.y] - [0 0]) > 900
+            if norm([next(1) next(2)] - [0 0]) > 900
                 controller.target.x = 0;
                 controller.target.y = 0;
+                controller.steps = 0;
             end
             
             % Check too close to another agent?
-            [controller, stop] = airspace(controller, msgs, dt, t);
+            [controller, stop] = airspace(controller, next, msgs, dt, t);
             if stop
                 return
             end
@@ -53,9 +65,9 @@ function controller = decide(controller, p, msgs, dt, t)
                 %return
             end
             
-            % Have we arrived?
+            % Will we arrived?
             % Use a threshold to stop the UAV spinning around the targ.
-            if pdist([controller.x,controller.y; ...
+            if pdist([next(1),next(2); ...
                     controller.target.x,controller.target.y]) < 20
                 controller.state = 1;
                 return
@@ -78,7 +90,7 @@ function controller = decide(controller, p, msgs, dt, t)
 end
 
 % Are we too close to another agent?
-function [controller, stop] = airspace(controller, msgs, dt, t)
+function [controller, stop] = airspace(controller, next, msgs, dt, t)
     stop = false;
     
     if t > 30
@@ -101,8 +113,9 @@ function [controller, stop] = airspace(controller, msgs, dt, t)
             % If it continued, where would it be?
             [x, y, theta] = rk4(other(1), other(2), other(3), ...
                other(4), other(5), dt);
-            dist = round(norm([controller.x controller.y] - [x y]));
-            
+           
+            % Too close to our project location?
+            dist = round(norm([next(1) next(2)] - [x y]));
             if dist < closest
                 closest = dist;
                 index = jj;
@@ -111,7 +124,7 @@ function [controller, stop] = airspace(controller, msgs, dt, t)
         end
 
         % What to do?
-        [controller, stop] = proximity(controller, index, closest, them, dt);
+        [controller, stop] = proximity(controller, next, them, index, closest, dt);
 
         % Store the values
         controller.neighbour.id = index;
@@ -120,7 +133,7 @@ function [controller, stop] = airspace(controller, msgs, dt, t)
 end
 
 % Too close?
-function [controller, stop] = proximity(controller, index, closest, them, dt)
+function [controller, stop] = proximity(controller, next, them, index, closest, dt)
     stop = false;
     
     % Is there a closest neighbour?
@@ -132,22 +145,16 @@ function [controller, stop] = proximity(controller, index, closest, them, dt)
                 return
             end
         end
-        
-        % Where will we be the next timestep?
-        [x, y, theta] = rk4(controller.x, controller.y, controller.theta, ...
-               controller.v, controller.mu, dt);
-           
-        % TODO - if our heading does not collide with them, do not turn
 
         % Will our airspace intersect theirs?
         r = 100;
-        [xout,~] = circcirc(x,y,r,them(1),them(2),r);
+        [xout,~] = circcirc(next(1),next(2),r,them(1),them(2),r);
         if ~isnan(xout)         
-            delta = abs(them(3) - theta);
+            delta = abs(them(3) - next(3));
             if delta < 90
                 % IF ANGLE IS GREATER, TURN RIGHT
                 % ELSE, TURN LEFT
-                if theta > them(3)
+                if next(3) > them(3)
                     heading = -90;
                 else
                     heading = 90;
@@ -155,7 +162,7 @@ function [controller, stop] = proximity(controller, index, closest, them, dt)
             elseif delta > 270
                 % IF ANGLE IS GREATER, TURN LEFT
                 % ELSE, TURN RIGHT
-                if theta > them(3)
+                if next(3) > them(3)
                     heading = 90;
                 else
                     heading = -90;
@@ -164,8 +171,8 @@ function [controller, stop] = proximity(controller, index, closest, them, dt)
                 % TURN RIGHT
                 heading = -90;
             end
-            controller.target.x = x + sind(theta + heading)*400;
-            controller.target.y = y + cosd(theta + heading)*400;
+            controller.target.x = next(1) + sind(next(3) + heading)*400;
+            controller.target.y = next(2) + cosd(next(3) + heading)*400;
             stop = true;
         end
     end
