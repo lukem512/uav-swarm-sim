@@ -4,7 +4,7 @@
 %
 % Luke Mitchell, Jan 2016
 %
-function controller = decide(controller, p, msgs, dt, t)
+function controller = decide(controller, p, msgs, dt)
     % Make bounds object
     b = bounds();
     
@@ -17,6 +17,7 @@ function controller = decide(controller, p, msgs, dt, t)
             r = (b-a).*rand(2,1) + a;
             controller.target.x = round(r(1));
             controller.target.y = round(r(2));
+            controller.steps = 0;
             controller.state = 2;
             
         % Fly to target
@@ -53,7 +54,7 @@ function controller = decide(controller, p, msgs, dt, t)
             end
             
             % Check too close to another agent?
-            [controller, stop] = airspace(controller, next, msgs, dt, t);
+            [controller, stop] = airspace(controller, next, msgs, dt);
             if stop
                 return
             end
@@ -90,37 +91,35 @@ function controller = decide(controller, p, msgs, dt, t)
 end
 
 % Are we too close to another agent?
-function [controller, stop] = airspace(controller, next, msgs, dt, t)
+function [controller, stop] = airspace(controller, next, msgs, dt)
     stop = false;
-    
-    if t > 30
-        them = 0;
-        index = 0;
-        closest = inf;
-        for jj = 1:size(msgs)
-            % Get the other agent, skipping ourself
-            if jj == controller.id
-                continue
-            end
-            other = msgs{jj};
-            
-            % Current position
-            dist = round(norm([controller.x controller.y] - other(1:2)));
-            if dist < 50
-                disp(fprintf('[Agent %d] I am TOO CLOSE to agent %d!', controller.id, jj));
-            end
-            
-            % If it continued, where would it be?
-            [x, y, theta] = rk4(other(1), other(2), other(3), ...
-               other(4), other(5), dt);
-           
-            % Too close to our project location?
-            dist = round(norm([next(1) next(2)] - [x y]));
-            if dist < closest
-                closest = dist;
-                index = jj;
-                them = [x y theta];
-            end
+   
+    them = 0;
+    index = 0;
+    closest = inf;
+    for jj = 1:size(msgs)
+        % Get the other agent, skipping ourself
+        if jj == controller.id
+            continue
+        end
+        other = msgs{jj};
+
+        % Current position
+        dist = round(norm([controller.x controller.y] - other(1:2)));
+        if dist < 50
+            disp(fprintf('[Agent %d] I am TOO CLOSE to agent %d!', controller.id, jj));
+        end
+
+        % If it continued, where would it be?
+        [x, y, theta] = rk4(other(1), other(2), other(3), ...
+           other(4), other(5), dt);
+
+        % Too close to our project location?
+        dist = round(norm([next(1) next(2)] - [x y]));
+        if dist < closest
+            closest = dist;
+            index = jj;
+            them = [x y theta];
         end
 
         % What to do?

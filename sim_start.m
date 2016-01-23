@@ -47,7 +47,6 @@ for aa = 1:nAgents
     % Memory
     controller.id = aa;
     controller.state = 1;
-    controller.steps = 0;
     controller.neighbour.id = 0;
     controller.neighbour.distance = inf;
 
@@ -86,32 +85,36 @@ for kk=1:1000,
         % Receive messages from other agents
         [msgs,channel] = simReceive(channel);
         
-        % Decide where to move
-        controller = decide(controller, p, msgs, dt, t);
-        
-        % Update position estimates
-        k = controller.v * controller.mu;
-        controller.theta = controller.theta+(k+2*k+2*k+k)*dt/6;
-        controller.theta = mod(controller.theta, 360);
+        % Set off one at a time
+        if t > aa * 10
+            
+            % Decide where to move
+            controller = decide(controller, p, msgs, dt);
 
-        %% Physical Robot
-        % Store history
-        for jj = nHistory:-1:2
-            robot.history(jj, :) = robot.history(jj-1, :);
+            % Update position estimates
+            k = controller.v * controller.mu;
+            controller.theta = controller.theta+(k+2*k+2*k+k)*dt/6;
+            controller.theta = mod(controller.theta, 360);
+
+            %% Physical Robot
+            % Store history
+            for jj = nHistory:-1:2
+                robot.history(jj, :) = robot.history(jj-1, :);
+            end
+            robot.history(1, :) = [robot.x robot.y];
+
+            % Move the robot
+            robot = move(robot, controller.v, controller.mu, dt);
+            
+            %% Controller
+            % Retrieve noisy location from GPS
+            [controller.x,controller.y] = gps(robot);
+
+            % Send location to other agents
+            msg = [controller.x controller.y controller.theta controller.v controller.mu];
+            channel = simTransmit(msg, channel);
         end
-        robot.history(1, :) = [robot.x robot.y];
-        
-        % Move the robot
-        robot = move(robot, controller.v, controller.mu, dt);
 
-        %% Controller
-        % Retrieve noisy location from GPS
-        [controller.x,controller.y] = gps(robot);
-        
-        % Send location to other agents
-        msg = [controller.x controller.y controller.theta controller.v controller.mu];
-        channel = simTransmit(msg, channel);
-        
         %% Store values
         agents{aa}.controller = controller;
         agents{aa}.robot = robot;
