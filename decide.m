@@ -8,6 +8,21 @@ function controller = decide(controller, p, msgs, dt)
     % Make bounds object
     b = bounds();
     
+    % Check for proximity
+    for jj = 1:size(msgs)
+        % Get the other agent, skipping ourself
+        if jj == controller.id
+            continue
+        end
+        other = msgs{jj};
+
+        % Current position
+        dist = round(norm([controller.x controller.y] - other(1:2)));
+        if dist < 50
+            disp(fprintf('[Agent %d] I am TOO CLOSE to agent %d!', controller.id, jj));
+        end
+    end
+    
     % FSM
     switch controller.state
         % Pick a random target
@@ -103,18 +118,12 @@ function [controller, stop] = airspace(controller, next, msgs, dt)
             continue
         end
         other = msgs{jj};
-
-        % Current position
-        dist = round(norm([controller.x controller.y] - other(1:2)));
-        if dist < 50
-            disp(fprintf('[Agent %d] I am TOO CLOSE to agent %d!', controller.id, jj));
-        end
-
+        
         % If it continued, where would it be?
         [x, y, theta] = rk4(other(1), other(2), other(3), ...
            other(4), other(5), dt);
 
-        % Too close to our project location?
+        % Too close to our projected location?
         dist = round(norm([next(1) next(2)] - [x y]));
         if dist < closest
             closest = dist;
@@ -123,7 +132,7 @@ function [controller, stop] = airspace(controller, next, msgs, dt)
         end
 
         % What to do?
-        [controller, stop] = proximity(controller, next, them, index, closest, dt);
+        [controller, stop] = proximity(controller, next, them, index, closest);
 
         % Store the values
         controller.neighbour.id = index;
@@ -132,7 +141,7 @@ function [controller, stop] = airspace(controller, next, msgs, dt)
 end
 
 % Too close?
-function [controller, stop] = proximity(controller, next, them, index, closest, dt)
+function [controller, stop] = proximity(controller, next, them, index, closest)
     stop = false;
     
     % Is there a closest neighbour?
@@ -147,31 +156,50 @@ function [controller, stop] = proximity(controller, next, them, index, closest, 
 
         % Will our airspace intersect theirs?
         r = 100;
-        [xout,~] = circcirc(next(1),next(2),r,them(1),them(2),r);
-        if ~isnan(xout)         
-            delta = abs(them(3) - next(3));
-            if delta < 90
-                % IF ANGLE IS GREATER, TURN RIGHT
-                % ELSE, TURN LEFT
-                if next(3) > them(3)
-                    heading = -90;
-                else
-                    heading = 90;
-                end
-            elseif delta > 270
-                % IF ANGLE IS GREATER, TURN LEFT
-                % ELSE, TURN RIGHT
-                if next(3) > them(3)
-                    heading = 90;
-                else
-                    heading = -90;
-                end
+        [xout,yout] = circcirc(next(1),next(2),r,them(1),them(2),r);
+        if ~isnan(xout)
+            % Find the line bisecting the airspaces
+            line = polyfit(xout, yout, 1);
+            
+            % Find two points on the line, a distance of 200 each
+            l = 200;
+            alpha = atand(line(1));
+            dx = cos(alpha)*l;
+            dy = sin(alpha)*l;
+            
+            p1 = [xout(1)+dx,yout(1)+dy];
+            p2 = [xout(2)-dx,yout(2)-dy];
+            
+            % Visualise?
+            plot(xout, yout, 'b--');
+            plot(p1(1),p2(2),'bx');
+            plot(p2(1),p2(2),'bx');
+            
+            % Compute delta for us for both points, and them for
+            % both points.
+            dus1 = norm([next(1),next(2)] - p1);
+            dus2 = norm([next(1),next(2)] - p2);
+            dthem1 = norm([them(1),them(2)] - p1);
+            dthem2 = norm([them(1),them(2)] - p2);
+            
+            % If we're closer to one, go to it
+            % If we're equidistant, lowest ID goes to first
+            if dus1 < dthem1
+                controller.target.x = p1(1);
+                controller.target.y = p1(2);
+            elseif dus2 < dthem2
+                controller.target.x = p2(1);
+                controller.target.y = p2(2);
             else
-                % TURN RIGHT
-                heading = -90;
+                if controller.id < index
+                    controller.target.x = p1(1);
+                    controller.target.y = p1(2);
+                else
+                    controller.target.x = p2(1);
+                    controller.target.y = p2(2);
+                end
             end
-            controller.target.x = next(1) + sind(next(3) + heading)*400;
-            controller.target.y = next(2) + cosd(next(3) + heading)*400;
+            controller.steps = 0;
             stop = true;
         end
     end
