@@ -20,7 +20,7 @@ nAgents = 8;
 agents = cell(nAgents);
 
 % Open new figure window
-figure
+figure;
 hold on
 
 % Colour map
@@ -47,10 +47,12 @@ for aa = 1:nAgents
     % Memory
     controller.id = aa;
     controller.state = 1;
-    controller.incloud = false;
     controller.launched = false;
     controller.neighbour.id = 0;
     controller.neighbour.distance = inf;
+    controller.cloud.inside = false;
+    controller.cloud.lastp = false;
+    controller.cloud.direction = '';
 
     %% Physical Robot state
     robot.x = 0;
@@ -121,7 +123,7 @@ for kk=1:((30 * 60 * 60) / dt),
 
             % Send location to other agents
             msg = [controller.x controller.y controller.theta ...
-                controller.v controller.mu controller.incloud];
+                controller.v controller.mu controller.cloud.inside];
             channel = simTransmit(msg, channel);
         end
 
@@ -145,7 +147,7 @@ for kk=1:((30 * 60 * 60) / dt),
         robot = agents{aa}.robot;
         
         % Make colour
-        if agents{aa}.controller.incloud
+        if agents{aa}.controller.cloud.inside
             colour = 'g';
         else
             colour = colours(mod(aa, size(colours, 1))+1, :);
@@ -155,7 +157,8 @@ for kk=1:((30 * 60 * 60) / dt),
         plot(robot.x,robot.y,'Color',colour,'Marker','o');
 
         % Plot orientation
-        plot(robot.history(:,1), robot.history(:,2), 'Color',colour,'LineStyle',':');
+        trail = [robot.x robot.y; robot.history];
+        plot(trail(:,1), trail(:,2), 'Color',colour,'LineStyle',':');
         
         if drawAirspace
             viscircles([robot.x robot.y],50);

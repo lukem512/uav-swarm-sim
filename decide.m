@@ -39,18 +39,28 @@ function controller = decide(controller, p, msgs, launched, dt)
             end
             
             % Has another agent found the cloud?
+            clouddwellers = [];
+            
             for jj = 1:size(msgs)
                 if jj == controller.id
                     continue
                 end
                 other = msgs{jj};
                 if other(6)
-                    lowerX = other(1) - 200;
-                    upperX = other(1) + 200;
-                    lowerY = other(2) - 200;
-                    upperY = other(2) + 200;
-                    break
+                    clouddwellers = [clouddwellers; other];
                 end
+            end
+            
+            % Pick one at random
+            nDwellers = size(clouddwellers,1);
+            if nDwellers > 0
+                i = (nDwellers-1).*rand() + 1;
+                i = round(i);
+                dweller = clouddwellers(i,:);
+                lowerX = dweller(1) - 300;
+                upperX = dweller(1) + 300;
+                lowerY = dweller(2) - 300;
+                upperY = dweller(2) + 300;
             end
             
             % Pick a random target
@@ -110,7 +120,6 @@ function controller = decide(controller, p, msgs, launched, dt)
             if ~launched
                 if controller.launched
                     if norm([next(1) next(2)] - [0 0]) < 200
-                        disp(fprintf('[Agent %d] I am TOO CLOSE to base!', controller.id));
                         % Fly to the closest of 4 corners
                         corners = [[-900, -900]; [-900, 900]; [900, -900]; [900, 900]];
                         closest = inf;
@@ -136,13 +145,18 @@ function controller = decide(controller, p, msgs, launched, dt)
             
             % Are we in the cloud?
             if incloud(p)
-                disp(fprintf('[Agent %d] I am in the cloud!', controller.id));
-                controller.incloud = true;
+                % disp(fprintf('[Agent %d] I am in the cloud!', controller.id));
+                controller.cloud.inside = true;
                 controller.state = 3;
                 return
+            else
+                controller.cloud.inside = false;
             end
             
-            % Will we arrived?
+            % Store historical value of p
+            controller.cloud.lastp = p;
+            
+            % Will we have arrived?
             % Use a threshold to stop the UAV spinning around the targ.
             if pdist([next(1),next(2); ...
                     controller.target.x,controller.target.y]) < 20
@@ -156,8 +170,13 @@ function controller = decide(controller, p, msgs, launched, dt)
             controller.mu = b.maxmu(dt);
             controller.v = b.maxv(dt);
             
-            % Check whether we're still in the cloud
-            % TODO
+            % Out of the cloud?
+            if ~incloud(p)
+                % disp(fprintf('[Agent %d] I have left the cloud!', controller.id));
+                controller.cloud.direction = '';
+                controller.cloud.inside = false;
+                controller.state = 1;
+            end
             return
             
         % Something went wrong
@@ -268,7 +287,7 @@ end
 
 % Are we at the cloud boundary?
 function in = incloud(p)
-    in = p > 0.9 && p < 1.1;
+    in = p > 0.6 && p < 1.4;
 end
 
 % Turn towards coordinates
@@ -280,6 +299,21 @@ end
 % Picks a random target
 function controller = randomtarg(controller, lowerX, upperX, ...
     lowerY, upperY)
+    % Sanity check
+    if lowerX < -900
+        lowerX = -900;
+    end
+    if lowerY < -900
+        lowerY = -900;
+    end
+    if upperX > 900
+        upperX = 900;
+    end
+    if upperY > 900
+        upperY = 900;
+    end
+    
+    % Pick a random location, between bounds
     a = lowerX;
     b = upperX;
     r = (b-a).*rand() + a;
