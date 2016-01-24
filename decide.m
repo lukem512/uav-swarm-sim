@@ -287,7 +287,7 @@ end
 
 % Are we at the cloud boundary?
 function in = incloud(p)
-    in = p > 0.6 && p < 1.4;
+    in = p > 0.6 && p < 1.2;
 end
 
 % Turn towards coordinates
