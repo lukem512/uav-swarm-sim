@@ -4,7 +4,7 @@
 %
 % Luke Mitchell, Jan 2016
 %
-function controller = decide(controller, p, msgs, dt)
+function controller = decide(controller, p, msgs, launched, dt)
     % Make bounds object
     b = bounds();
     
@@ -33,6 +33,11 @@ function controller = decide(controller, p, msgs, dt)
             upperX = 900;
             upperY = 900;
             
+            % Don't turn around initially!
+            if ~controller.launched
+                lowerY = 0;
+            end
+            
             % Has another agent found the cloud?
             for jj = 1:size(msgs)
                 if jj == controller.id
@@ -49,14 +54,16 @@ function controller = decide(controller, p, msgs, dt)
             end
             
             % Pick a random target
-            a = lowerX;
-            b = upperX;
-            r = (b-a).*rand() + a;
-            controller.target.x = round(r);
-            a = lowerY;
-            b = upperY;
-            r = (b-a).*rand() + a;
-            controller.target.y = round(r);
+            % Don't deliberately fly near the origin until all agents
+            % are launched.
+            controller = randomtarg(controller, lowerX, ...
+                        upperX, lowerY, upperY);
+            if launched
+                while norm([controller.target.x controller.target.y] - [0 0]) < 200
+                    controller = randomtarg(controller, lowerX, ...
+                        upperX, lowerY, upperY);
+                end
+            end
             controller.steps = 0;
             controller.state = 2;
             
@@ -79,6 +86,14 @@ function controller = decide(controller, p, msgs, dt)
                 disp(fprintf('[Agent %d] I am TOO FAR from base!', controller.id));
             end
             
+            % Have we left the launch site?
+            if ~controller.launched
+                if norm([controller.x controller.y] - [0 0]) > 200
+                    disp(fprintf('[Agent %d] I have launched!', controller.id));
+                    controller.launched = true;
+                end
+            end
+            
             % Where will we be next timestep?
             [x, y, theta] = rk4(controller.x, controller.y, ...
                 controller.theta, controller.v, ...
@@ -88,9 +103,29 @@ function controller = decide(controller, p, msgs, dt)
             % Will we be too far away?
             % Turn towards the origin
             if norm([next(1) next(2)] - [0 0]) > 900
-                controller.target.x = 0;
-                controller.target.y = 0;
-                controller.steps = 0;
+                controller.state = 1;
+            end
+            
+            % Too close to the origin during others launch?
+            if ~launched
+                if controller.launched
+                    if norm([next(1) next(2)] - [0 0]) < 200
+                        disp(fprintf('[Agent %d] I am TOO CLOSE to base!', controller.id));
+                        % Fly to the closest of 4 corners
+                        corners = [[-900, -900]; [-900, 900]; [900, -900]; [900, 900]];
+                        closest = inf;
+                        for jj = 1:size(corners,1)
+                            corner = corners(jj,:);
+                            dist = norm([next(1) next(2)] - corner);
+                            if dist < closest
+                                closest = dist;
+                                controller.target.x = corner(1);
+                                controller.target.y = corner(2);
+                            end
+                        end
+                        controller.steps = 0;
+                    end
+                end
             end
             
             % Check too close to another agent?
@@ -240,6 +275,19 @@ end
 function [controller, steps] = face(controller, x, y, dt)
     delta = atan2d(x-controller.x,y-controller.y) - controller.theta;
     [controller, steps] = turn(controller, delta, dt);
+end
+
+% Picks a random target
+function controller = randomtarg(controller, lowerX, upperX, ...
+    lowerY, upperY)
+    a = lowerX;
+    b = upperX;
+    r = (b-a).*rand() + a;
+    controller.target.x = round(r);
+    a = lowerY;
+    b = upperY;
+    r = (b-a).*rand() + a;
+    controller.target.y = round(r);
 end
 
 % Turn by delta degrees

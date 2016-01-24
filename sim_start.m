@@ -48,6 +48,7 @@ for aa = 1:nAgents
     controller.id = aa;
     controller.state = 1;
     controller.incloud = false;
+    controller.launched = false;
     controller.neighbour.id = 0;
     controller.neighbour.distance = inf;
 
@@ -73,6 +74,13 @@ for kk=1:((30 * 60 * 60) / dt),
     % time
     t = t + dt;
     
+    % All agents launched?
+    if t > (30 * nAgents)
+        launched = true;
+    else
+        launched = false;
+    end
+    
     for aa = 1:nAgents
         %% Get simulation values
         controller = agents{aa}.controller;
@@ -90,7 +98,7 @@ for kk=1:((30 * 60 * 60) / dt),
         if t > (aa-1) * 30
             
             % Decide where to move
-            controller = decide(controller, p, msgs, dt);
+            controller = decide(controller, p, msgs, launched, dt);
 
             % Update position estimates
             k = controller.v * controller.mu;
