@@ -216,10 +216,6 @@ for kk=1:loops,
     end
     
     % Plot history
-    %xs = [];
-    %ys = [];
-    %zs = [];
-    
     if kk <= nCloudHistory
         nCloudHistoryToUse = kk - 1;
     else
@@ -232,30 +228,15 @@ for kk=1:loops,
             s = [];
             col = [];
             for ii = 1:size(c,1)
-                s = [s; nCloudHistoryToUse - jj]
-                col = [col; jj]
+                s = [s; nCloudHistoryToUse - jj];
+                col = [col; jj];
             end
             if s == 0
-               s = 1
+               s = 1;
             end
-            c(:,1)
             scatter(c(:,1),c(:,2),s,col);
         end
-        %if size(c,1) > 1
-        %    xs = [xs; c(:,1).'];
-        %    ys = [ys; c(:,2).'];
-        %    z = [];
-        %    for ii = 1:size(c,1)
-        %        z = [z jj];
-        %    end
-        %    zs = [zs; z];
-        %end
     end
-    
-    % Draw the contours!
-    %if size(zs,1) > 1
-        %contour(xs, ys, zs);
-    %end
     
     % Divide by the number agents to ge the average
     concentration(kk) = concentration(kk) / nAgents;
@@ -265,7 +246,7 @@ for kk=1:loops,
     cla
     hold on
     plot(concentration);
-    axis([1, loops, 0, 1]);
+    axis([1, loops, 0, 2.5]);
     title('Average Concentration at UAV Location');
     xlabel('Time (t)');
     ylabel('Average Concentration (ppm)');
