@@ -190,7 +190,6 @@ for kk=1:loops,
     subplot(4, 2, [2,4,6]);
     caxis([0, 50])
     c = colorbar('EastOutside');
-    set(c,'YDir','reverse');
     ylabel(c,'Age of Estimate (dt)');
     xlabel('x-coordinate');
     ylabel('y-coordinate');
@@ -225,16 +224,18 @@ for kk=1:loops,
     for jj = 0:nCloudHistoryToUse
         c = cloudh{kk-jj};
         if size(c,1) > 0
-            s = [];
-            col = [];
+            ss = [];
+            cols = [];
             for ii = 1:size(c,1)
-                s = [s; nCloudHistoryToUse - jj];
-                col = [col; jj];
+                s = nCloudHistoryToUse - jj;
+                if s == 0
+                   s = 1;
+                end
+                ss = [ss; s];
+                cols = [cols; jj];
             end
-            if s == 0
-               s = 1;
-            end
-            scatter(c(:,1),c(:,2),s,col);
+            
+            scatter(c(:,1),c(:,2),ss,cols);
         end
     end
     
