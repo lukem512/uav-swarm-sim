@@ -176,6 +176,8 @@ function controller = decide(controller, p, msgs, launched, dt)
                 controller.cloud.direction = '';
                 controller.cloud.inside = false;
                 controller.state = 1;
+            else
+                controller.cloud.points = [controller.cloud.points; [controller.x controller.y]];
             end
             return
             

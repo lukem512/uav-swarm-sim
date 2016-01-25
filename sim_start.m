@@ -16,12 +16,16 @@ t = 0;
 dt = 2;
 
 % Number of agents in swarm
-nAgents = 8;
+nAgents = 6;
 agents = cell(nAgents);
+
+% How long to simulate for?
+% 1 Minute
+time = 1 * 60 * 60;
+loops = time / dt;
 
 % Open new figure window
 figure;
-hold on
 
 % Colour map
 colours = [[0.859 0.251 0.251]; [0.969 0.408 0.408]; [1.0 0.588 0.588]; ...
@@ -31,6 +35,15 @@ drawAirspace = false;
 
 % Plot history
 nHistory = 3;
+
+% Plot cloud history
+nCloudHistory = 50;
+
+% Cloud history
+cloudh = cell(loops,1);
+
+% Concentration history
+concentration = -1*ones(loops,1);
 
 %% Create the agents
 for aa = 1:nAgents
@@ -51,8 +64,9 @@ for aa = 1:nAgents
     controller.neighbour.id = 0;
     controller.neighbour.distance = inf;
     controller.cloud.inside = false;
-    controller.cloud.lastp = false;
+    controller.cloud.lastp = 0;
     controller.cloud.direction = '';
+    controller.cloud.points = [];
 
     %% Physical Robot state
     robot.x = 0;
@@ -71,7 +85,7 @@ end
 channel = initChannel();
 
 %% Main simulation loop
-for kk=1:((30 * 60 * 60) / dt),
+for kk=1:loops,
     
     % time
     t = t + dt;
@@ -136,11 +150,14 @@ for kk=1:((30 * 60 * 60) / dt),
     channel = simChannel(channel);
     
     %% Visualise
-    % Clear the axes for fresh plotting
+
+    % Plot the agents
+    subplot(4, 2, [1,3,5]);
+    title(sprintf('Simulation State at t=%.1f',t));
+    xlabel('x-coordinate');
+    ylabel('y-coordinate');
+    hold on
     cla
-    
-    % Put information in the title
-    title(sprintf('Simulation state at t=%.1f secs',t))
     
     for aa = 1:nAgents
         % Get values
@@ -167,7 +184,91 @@ for kk=1:((30 * 60 * 60) / dt),
     end
     
     % Plot the cloud contours
-    cloudplot(cloud,t)
+    cloudplot(cloud,t);
+    
+    % Plot where the agents think the cloud is
+    subplot(4, 2, [2,4,6]);
+    caxis([0, 50])
+    c = colorbar('EastOutside');
+    set(c,'YDir','reverse');
+    ylabel(c,'Age of Estimate (dt)');
+    xlabel('x-coordinate');
+    ylabel('y-coordinate');
+    axis equal;
+    axis([min(cloud.x) max(cloud.x) min(cloud.y) max(cloud.y)]);
+    title('Cloud Location Determined by UAVs');
+    hold on
+    cla
+    
+    cloudh(kk) = [];
+    concentration(kk) = 0;
+    for aa = 1:nAgents
+        % Get values
+        controller = agents{aa}.controller;
+        
+        % Get points within cloud
+        if controller.cloud.inside
+            cloudh{kk} = [cloudh{kk}; [controller.x controller.y]];
+        end
+        
+        % Get the average concentration
+        concentration(kk) = concentration(kk) + controller.cloud.lastp;
+    end
+    
+    % Plot history
+    %xs = [];
+    %ys = [];
+    %zs = [];
+    
+    if kk <= nCloudHistory
+        nCloudHistoryToUse = kk - 1;
+    else
+        nCloudHistoryToUse = nCloudHistory;
+    end  
+    
+    for jj = 0:nCloudHistoryToUse
+        c = cloudh{kk-jj};
+        if size(c,1) > 0
+            s = [];
+            col = [];
+            for ii = 1:size(c,1)
+                s = [s; nCloudHistoryToUse - jj]
+                col = [col; jj]
+            end
+            if s == 0
+               s = 1
+            end
+            c(:,1)
+            scatter(c(:,1),c(:,2),s,col);
+        end
+        %if size(c,1) > 1
+        %    xs = [xs; c(:,1).'];
+        %    ys = [ys; c(:,2).'];
+        %    z = [];
+        %    for ii = 1:size(c,1)
+        %        z = [z jj];
+        %    end
+        %    zs = [zs; z];
+        %end
+    end
+    
+    % Draw the contours!
+    %if size(zs,1) > 1
+        %contour(xs, ys, zs);
+    %end
+    
+    % Divide by the number agents to ge the average
+    concentration(kk) = concentration(kk) / nAgents;
+    
+    % Plot the average distance from the cloud
+    subplot(4, 2, [7,8]);
+    cla
+    hold on
+    plot(concentration);
+    axis([1, loops, 0, 1]);
+    title('Average Concentration at UAV Location');
+    xlabel('Time (t)');
+    ylabel('Average Concentration (ppm)');
     
     % Pause ensures that the plots update
     pause(dt*0.1)
